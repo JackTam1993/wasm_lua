@@ -2,19 +2,74 @@
 #include "lua.h"
 #include <lauxlib.h>
 #include <lualib.h>
+#include <stdlib.h>
+#include <emscripten.h>
 
-int run_lua(const char* script) {
-	lua_State* lua = luaL_newstate();
+EMSCRIPTEN_KEEPALIVE
+const char* jsonToData(const char* json) {
+
+	lua_State *lua = luaL_newstate();
 	luaL_openlibs(lua);
+	int retLoad = luaL_dofile(lua, "./script/fa.lua");
 
-	int res = luaL_dostring(lua, script);
+	if (retLoad == 0) {
+        printf("load file success retLoad:%d\n", retLoad);
+    } else {
+		return 0;
+	}
 
-	size_t len = 0;
-	const char* value = lua_tolstring(lua, lua_gettop(lua), &len);
+	lua_getglobal(lua, "jsonToData");
+    lua_pushstring(lua, json);
 
-	printf("%s\n", value);
+	int pcallRet = lua_pcall(lua,1,1,0);
+    if (pcallRet != 0) {
+        printf("error %s\n", lua_tostring(lua, -1));
+        char* failed = "failed";
+        return 0;
+    }
 
-	lua_close(lua);
+    // 获取 Lua 函数的返回值
+    if (lua_isstring(lua, -1)) { // 如果返回值是一个字符串
+        const char *data_str = lua_tostring(lua, -1);
+		printf("data from lua: %s \n", data_str);
+        return data_str;
+    }
+
+    lua_close(lua);
+
+	return 0;
+}
+
+const char* dataToJson(const char* data) {
+
+	lua_State *lua = luaL_newstate();
+	luaL_openlibs(lua);
+	int retLoad = luaL_dofile(lua, "./script/fa.lua");
+
+	if (retLoad == 0) {
+        printf("load file success retLoad:%d\n", retLoad);
+    } else {
+		return 0;
+	}
+
+	lua_getglobal(lua, "dataToJson");
+    lua_pushstring(lua, data);
+
+	int pcallRet = lua_pcall(lua,1,1,0);
+    if (pcallRet != 0) {
+        printf("error %s\n", lua_tostring(lua, -1));
+        char* failed = "failed";
+        return 0;
+    }
+
+	// 获取 Lua 函数的返回值
+    if (lua_isstring(lua, -1)) { // 如果返回值是一个字符串
+        const char *json_str = lua_tostring(lua, -1);
+		printf("data from lua: %s \n", json_str);
+        return json_str;
+    }
+
+    lua_close(lua);
 
 	return 0;
 }
